@@ -10,8 +10,11 @@
 
 #define NUMPIXELS  1
 // Change the credentials below, so your ESP8266 connects to your router
-const char* ssid = "ORBI20";
-const char* password = "smoothwater684";
+// const char* ssid = "ORBI20";
+// const char* password = "smoothwater684";
+const char* ssid = "FRITZ!Box 6490 Cable";
+const char* password = "99656955838332221415";
+
 
 // MQTT broker credentials (set to NULL if not required)
 const char* MQTT_username = NULL; 
