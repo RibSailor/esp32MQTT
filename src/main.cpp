@@ -10,8 +10,11 @@
 
 #define NUMPIXELS  1
 // Change the credentials below, so your ESP8266 connects to your router
-const char* ssid = "ORBI20";
-const char* password = "smoothwater684";
+const char* ssid0 = "ORBI20";
+const char* password0 = "smoothwater684";
+const char* ssid1 = "FRITZ!Box 6490 Cable";
+const char* password1 = "99656955838332221415";
+
 
 // MQTT broker credentials (set to NULL if not required)
 const char* MQTT_username = NULL; 
@@ -68,9 +71,27 @@ void setup_wifi() {
   // We start by connecting to a WiFi network
   Serial.println();
   Serial.print("Connecting to ");
-  Serial.println(ssid);
- 
-  WiFi.begin(ssid, password);
+  Serial.println(ssid0);
+
+  // WiFi.begin(ssid0, password0);
+  // scan....
+  int n = WiFi.scanNetworks();
+  for (int i = 0; i < n; ++i) {
+    if (WiFi.SSID(i)== ssid0 ) {
+      Serial.println();
+      Serial.print("Connecting to ");
+      Serial.println(ssid0);
+      WiFi.begin(ssid0,password0); //trying to connect the modem
+      break;
+    }
+    if (WiFi.SSID(i)== ssid1) {
+      Serial.println();
+      Serial.print("Connecting to ");
+      Serial.println(ssid1);
+      WiFi.begin(ssid1,password1); //trying to connect the modem
+      break;
+    }
+  }
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
