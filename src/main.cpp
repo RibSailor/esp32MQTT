@@ -5,10 +5,19 @@
 #include <Adafruit_GFX.h>    // Core graphics library
 #include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
 #include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
 //#include <Fonts/FreeMonoBold18pt7b.h>
 
-
+#define BME_SCK 13
+#define BME_MISO 12
+#define BME_MOSI 11
+#define BME_CS 10
 #define NUMPIXELS  1
+#define SEALEVELPRESSURE_HPA (1013.25)
+
+Adafruit_BME280 bme;
 // Change the credentials below, so your ESP8266 connects to your router
 const char* ssid0 = "ORBI20";
 const char* password0 = "smoothwater684";
@@ -47,6 +56,7 @@ long lastMeasure = 0;
 // This functions connects your ESP8266 to your router
 void setup_wifi() {
   delay(1000);
+
 
   // turn on backlite
   pinMode(TFT_BACKLITE, OUTPUT);
@@ -130,10 +140,32 @@ void PrintToTFT(String boilerState, String currentTemp, String setPoint) {
     tft.print("C");
 }
 
-// This function is executed when some device publishes a message to a topic that your ESP8266 is subscribed to
+void printBMEValues() {
+    Serial.print("Temperature = ");
+    Serial.print(bme.readTemperature());
+    Serial.println(" °C");
+
+    Serial.print("Pressure = ");
+
+    Serial.print(bme.readPressure() / 100.0F);
+    Serial.println(" hPa");
+
+    Serial.print("Approx. Altitude = ");
+    Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
+    Serial.println(" m");
+
+    Serial.print("Humidity = ");
+    Serial.print(bme.readHumidity());
+    Serial.println(" %");
+
+    Serial.println();
+}
+
+// This function is executed when some device publishes a message to a topic that your ESP32 is subscribed to
 // Change the function below to add logic to your program, so when a device publishes a message to a topic that 
 // your ESP8266 is subscribed you can actually do something
 void callback(String topic, byte* message, unsigned int length) {
+  printBMEValues();
   Serial.print("Message arrived on topic: ");
   Serial.print(topic);
   Serial.print(". Message: ");
@@ -216,22 +248,40 @@ void reconnect() {
   }
 }
 
+void setupBME() {
+  unsigned BMEstatus;
+  BMEstatus = bme.begin(); 
+
+  if (!BMEstatus) {
+    Serial.println("Could not find a valid BME280 sensor, check wiring, address, sensor ID!");      Serial.print("SensorID was: 0x"); Serial.println(bme.sensorID(),16);
+    Serial.print("        ID of 0xFF probably means a bad address, a BMP 180 or BMP 085\n");
+    Serial.print("   ID of 0x56-0x58 represents a BMP 280,\n");
+    Serial.print("        ID of 0x60 represents a BME 280.\n");
+    Serial.print("        ID of 0x61 represents a BME 680.\n");
+    while (1) delay(10);
+    }
+}
+
+
+
 // The setup function sets your ESP GPIOs to Outputs, starts the serial communication at a baud rate of 115200
 // Sets your mqtt broker and sets the callback function
 // The callback function is what receives messages and actually controls the LEDs
+
 void setup() {
   pinMode(boiler, OUTPUT);
   digitalWrite(boiler, HIGH);
   Serial.begin(9600);
   setup_wifi();
+  setupBME();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
-
+  printBMEValues();
 }
 
 // For this project, you don't need to change anything in the loop function. Basically it ensures that you ESP is connected to your broker
 void loop() {
-
+  // printBMEValues();
   if (!client.connected()) {
     reconnect();
   }
@@ -239,18 +289,22 @@ void loop() {
     client.connect("ESP32Client", MQTT_username, MQTT_password);
 
   now = millis();
-  /* Publishes boiler state every 30 seconds
+  // Publishes bme values every 30 seconds
   if (now - lastMeasure > 30000) {
     lastMeasure = now;
     // Temperature in Celsius
    
 
     // Publishes Temperature and Humidity values
-    client.publish("caravan/room/temp", String(temperature).c_str());
+    client.publish("caravan/bme/temp", String(bme.readTemperature()).c_str());
+    client.publish("caravan/bme/press", String(bme.readPressure() / 100.0F).c_str());
+    client.publish("caravan/bme/alt", String(bme.readAltitude(SEALEVELPRESSURE_HPA)).c_str());
+    client.publish("caravan/bme/hum", String(bme.readHumidity()).c_str());
 
-    Serial.print("Temperature: ");
-    Serial.print(temperature);
+
+    Serial.print("BME Temperature: ");
+    Serial.print(bme.readTemperature());
     Serial.println(" ºC"); 
     
-  }*/
+  }
 } 
