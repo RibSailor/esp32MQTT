@@ -18,7 +18,8 @@ const char* MQTT_username = NULL;
 const char* MQTT_password = NULL; 
 
 // Change the variable to your Raspberry Pi IP address, so it connects to your MQTT broker
-const char* mqtt_server = "192.168.1.150";
+// const char* mqtt_server = "192.168.1.150";
+const char* mqtt_server = "breandown.local";
 
 
 // Initializes the espClient. You should change the espClient name if you have multiple ESPs running in your home automation system
