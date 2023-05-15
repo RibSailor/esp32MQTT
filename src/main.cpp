@@ -8,6 +8,8 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
+#include <ESPAsyncWebServer.h>
+#include <AsyncElegantOTA.h>
 //#include <Fonts/FreeMonoBold18pt7b.h>
 
 #define BME_SCK 13
@@ -16,7 +18,7 @@
 #define BME_CS 10
 #define NUMPIXELS  1
 #define SEALEVELPRESSURE_HPA (1013.25)
-
+AsyncWebServer server(80);
 Adafruit_BME280 bme;
 // Change the credentials below, so your ESP8266 connects to your router
 const char* ssid0 = "ORBI20";
@@ -53,20 +55,14 @@ String setPoint;
 long now = millis();
 long lastMeasure = 0;
 
-// This functions connects your ESP8266 to your router
-void setup_wifi() {
-  delay(1000);
-
-
+void setup_TFT() {
   // turn on backlite
   pinMode(TFT_BACKLITE, OUTPUT);
   digitalWrite(TFT_BACKLITE, HIGH);
-
   // turn on the TFT / I2C power supply
   pinMode(TFT_I2C_POWER, OUTPUT);
   digitalWrite(TFT_I2C_POWER, HIGH);
   delay(10);
-
   // initialize TFT
   tft.init(135, 240); // Init ST7789 240x135
   tft.setRotation(3);
@@ -77,7 +73,13 @@ void setup_wifi() {
     tft.drawRect(x, x, tft.width() - (x * 2), tft.height() - (x * 2), ST77XX_RED);
   }               
   tft.setTextWrap(false);
-  
+  pixels.begin(); // INITIALIZE NeoPixel strip object (REQUIRED)
+  pixels.setBrightness(125);
+}
+
+// This functions connects your ESP8266 to your router
+void setup_wifi() {
+  delay(1000);
   // We start by connecting to a WiFi network
   Serial.println();
   Serial.print("Connecting to ");
@@ -109,8 +111,6 @@ void setup_wifi() {
   Serial.println("");
   Serial.print("WiFi connected - ESP IP address: ");
   Serial.println(WiFi.localIP());
-  pixels.begin(); // INITIALIZE NeoPixel strip object (REQUIRED)
-  pixels.setBrightness(125);
 }
 
 void PrintToTFT(String boilerState, String currentTemp, String setPoint) {
@@ -151,8 +151,9 @@ void printBMEValues() {
     Serial.println(" hPa");
 
     Serial.print("Approx. Altitude = ");
-    Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
-    Serial.println(" m");
+    //Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
+    Serial.print(bme.readPressure() / 101325.0F);
+    Serial.println(" m***");
 
     Serial.print("Humidity = ");
     Serial.print(bme.readHumidity());
@@ -262,8 +263,6 @@ void setupBME() {
     }
 }
 
-
-
 // The setup function sets your ESP GPIOs to Outputs, starts the serial communication at a baud rate of 115200
 // Sets your mqtt broker and sets the callback function
 // The callback function is what receives messages and actually controls the LEDs
@@ -273,6 +272,15 @@ void setup() {
   digitalWrite(boiler, HIGH);
   Serial.begin(9600);
   setup_wifi();
+  setup_TFT();
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", "Hi! I am esp32MQTT.");
+  });
+
+  AsyncElegantOTA.begin(&server);    // Start ElegantOTA
+  server.begin();
+  Serial.println("HTTP server started");
+
   setupBME();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
